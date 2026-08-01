@@ -8,6 +8,11 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
       - run: pip install -e .[dev]
+      - run: ruff check .
+      - run: mypy grounded_evals
       - run: pytest -q            # mock judge only — no keys in CI
       - run: python examples/run_eval.py
-
+      - run: python -m grounded_evals.agreement fixtures/labelled_claims.jsonl
+      - run: >
+          python -m grounded_evals.runner examples/dataset.jsonl
+          --out /tmp/report.json --review-queue /tmp/queue.jsonl
