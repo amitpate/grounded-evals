@@ -1,12 +1,14 @@
-from .base import Judge
+from typing import Any
+
+from .base import Judge, JudgeError
 from .mock import MockJudge
 
-__all__ = ["Judge", "MockJudge", "LLMJudge"]
+__all__ = ["Judge", "JudgeError", "MockJudge", "LLMJudge"]
 
 
-def __getattr__(name):
-    if name == "LLMJudge":  # lazy: importable without env configured
+def __getattr__(name: str) -> Any:
+    if name == "LLMJudge":  # lazy: importable without transport concerns
         from .llm import LLMJudge
+
         return LLMJudge
     raise AttributeError(name)
-

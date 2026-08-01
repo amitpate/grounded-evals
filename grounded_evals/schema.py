@@ -6,16 +6,31 @@ against. Nothing here depends on a model provider.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
+from typing import ClassVar
 
 
 class Verdict(str, Enum):
+    """Per-claim faithfulness verdict.
+
+    The taxonomy follows what the attribution literature converged on
+    (AttrScore, CAQA, RAGTruth): *contradicted* (the source states otherwise)
+    and *unsupported* (the source is silent) are different product failures —
+    the first breaks trust in the source link, the second is a retrieval or
+    citation gap — and are never collapsed into one class.
+    """
+
     SUPPORTED = "supported"
-    PARTIAL = "partial"          # span supports a weaker version of the claim
-    UNSUPPORTED = "unsupported"
+    PARTIAL = "partial"              # spans support a strictly weaker claim
+    CONTRADICTED = "contradicted"    # spans state something incompatible
+    UNSUPPORTED = "unsupported"      # spans are silent on the claim
     NOT_CHECKABLE = "not_checkable"  # opinion, hedge, or no factual content
+
+
+# A '.' between two digits is a decimal point, not a sentence terminator.
+_SENTENCE_RE = re.compile(r"(?:[^.!?\n]|(?<=\d)\.(?=\d))+[.!?]*")
 
 
 @dataclass(frozen=True)
@@ -24,20 +39,29 @@ class SourceDoc:
     title: str
     text: str
 
-    def sentences(self) -> list["SourceSpan"]:
-        """Naive sentence segmentation; spans carry char offsets into the doc."""
-        import re
+    def sentences(self) -> list[SourceSpan]:
+        """Sentence spans whose char offsets round-trip exactly.
 
+        Invariant: ``doc.text[span.start:span.end] == span.text`` for every
+        returned span. Decimal numbers ("315.5") do not split a sentence, and
+        no source text is dropped beyond whitespace and bare punctuation
+        runs — a verifier must never silently lose evidence.
+        """
         spans: list[SourceSpan] = []
-        for m in re.finditer(r"[^.!?\n]+[.!?]?", self.text):
-            s = m.group().strip()
-            if len(s) >= 20:  # skip fragments
-                spans.append(SourceSpan(self.doc_id, m.start(), m.end(), s))
+        for m in _SENTENCE_RE.finditer(self.text):
+            raw = m.group()
+            stripped = raw.strip()
+            if not stripped:
+                continue
+            start = m.start() + (len(raw) - len(raw.lstrip()))
+            spans.append(SourceSpan(self.doc_id, start, start + len(stripped), stripped))
         return spans
 
 
 @dataclass(frozen=True)
 class SourceSpan:
+    """A contiguous slice of a source document; text matches the offsets."""
+
     doc_id: str
     start: int
     end: int
@@ -46,9 +70,15 @@ class SourceSpan:
 
 @dataclass(frozen=True)
 class Citation:
-    """A citation as emitted by the generator: claim -> document (or span)."""
+    """A citation as emitted by the generator.
+
+    ``doc_id`` may initially be a raw marker ("1", "wembley"); the pipeline
+    resolves markers to corpus doc ids before alignment (see
+    ``pipeline.evaluate``). ``quote`` is a generator-provided quote, if any.
+    """
+
     doc_id: str
-    quote: Optional[str] = None  # generator-provided quote, if any
+    quote: str | None = None
 
 
 @dataclass
@@ -61,24 +91,53 @@ class Claim:
 
 @dataclass
 class Alignment:
+    """Claim -> candidate source spans, and how they were chosen."""
+
     claim_id: str
     spans: list[SourceSpan]
-    method: str  # "lexical" | "judge" | "quote"
+    method: str  # "quote" | "lexical" | "corpus"
+
+
+@dataclass(frozen=True)
+class JudgeVerdict:
+    """What a judge returns for one (claim, spans) query.
+
+    ``supporting`` holds indices into the span list the judge was shown —
+    the minimal set of spans the verdict rests on ([] when nothing supports).
+    A confidence of exactly 0.0 is the judge-failure sentinel and always
+    routes to review.
+    """
+
+    verdict: Verdict
+    confidence: float
+    rationale: str
+    supporting: tuple[int, ...] = ()
 
 
 @dataclass
 class ClaimResult:
+    REVIEW_THRESHOLD: ClassVar[float] = 0.7
+
     claim: Claim
     alignment: Alignment
     verdict: Verdict
     confidence: float
     rationale: str
+    supporting_spans: list[SourceSpan] = field(default_factory=list)
 
     @property
     def needs_review(self) -> bool:
-        return 0.0 < self.confidence < ClaimResult.REVIEW_THRESHOLD
+        """Whether this verdict falls below the automation boundary.
 
-    REVIEW_THRESHOLD: float = 0.7
+        Confidence 0.0 (the judge-failure sentinel) is deliberately included:
+        a failed verdict must never bypass review.
+        """
+        return self.claim.checkable and self.confidence < ClaimResult.REVIEW_THRESHOLD
+
+
+def _ratio(num: int, denom: int) -> float | None:
+    """None when there is nothing to measure — never a fake 0.0."""
+    return num / denom if denom else None
 
 
 @dataclass
@@ -91,53 +150,101 @@ class EvalReport:
         return [r for r in self.results if r.claim.checkable]
 
     @property
-    def citation_recall(self) -> float:
+    def abstained(self) -> bool:
+        """True when the answer contained no checkable factual claims.
+
+        On questions the corpus cannot answer, abstaining is the *correct*
+        behavior; batch runners use this to score abstention quality.
+        """
+        return not self.checkable
+
+    @property
+    def citation_recall(self) -> float | None:
         """Fraction of checkable claims carrying at least one citation."""
         c = self.checkable
-        if not c:
-            return 0.0
-        return sum(1 for r in c if r.claim.citations) / len(c)
+        return _ratio(sum(1 for r in c if r.claim.citations), len(c))
 
     @property
-    def citation_precision(self) -> float:
-        """Of cited claims, fraction whose citations support them."""
+    def citation_precision(self) -> float | None:
+        """Of cited checkable claims, fraction fully supported by their sources."""
         cited = [r for r in self.checkable if r.claim.citations]
-        if not cited:
-            return 0.0
-        return sum(1 for r in cited if r.verdict == Verdict.SUPPORTED) / len(cited)
+        return _ratio(
+            sum(1 for r in cited if r.verdict is Verdict.SUPPORTED), len(cited)
+        )
 
     @property
-    def unsupported_rate(self) -> float:
+    def per_citation_precision(self) -> float | None:
+        """Of individual citations, fraction that contributed a supporting span.
+
+        Distinct from ``citation_precision``: a claim citing [1][2] where only
+        [1] supports it is over-citing, and this metric sees it (ALCE-style
+        per-citation precision). Duplicate citations of the same doc on one
+        claim count once — repeating a good citation must not buy score.
+        """
+        pairs = [
+            (r, doc_id)
+            for r in self.checkable
+            for doc_id in sorted({c.doc_id for c in r.claim.citations})
+        ]
+        good = sum(
+            1
+            for r, doc_id in pairs
+            if r.verdict in (Verdict.SUPPORTED, Verdict.PARTIAL)
+            and doc_id in {s.doc_id for s in r.supporting_spans}
+        )
+        return _ratio(good, len(pairs))
+
+    def _rate(self, verdict: Verdict) -> float | None:
         c = self.checkable
-        if not c:
-            return 0.0
-        return sum(1 for r in c if r.verdict == Verdict.UNSUPPORTED) / len(c)
+        return _ratio(sum(1 for r in c if r.verdict is verdict), len(c))
 
     @property
-    def partial_rate(self) -> float:
+    def partial_rate(self) -> float | None:
+        return self._rate(Verdict.PARTIAL)
+
+    @property
+    def contradicted_rate(self) -> float | None:
+        return self._rate(Verdict.CONTRADICTED)
+
+    @property
+    def unsupported_rate(self) -> float | None:
+        return self._rate(Verdict.UNSUPPORTED)
+
+    @property
+    def ungrounded_rate(self) -> float | None:
+        """Contradicted + unsupported: the headline trust-erosion number."""
         c = self.checkable
-        if not c:
-            return 0.0
-        return sum(1 for r in c if r.verdict == Verdict.PARTIAL) / len(c)
+        return _ratio(
+            sum(
+                1
+                for r in c
+                if r.verdict in (Verdict.CONTRADICTED, Verdict.UNSUPPORTED)
+            ),
+            len(c),
+        )
 
     @property
     def review_queue(self) -> list[ClaimResult]:
         return [r for r in self.results if r.needs_review]
 
     @property
-    def review_load(self) -> float:
-        if not self.results:
-            return 0.0
-        return len(self.review_queue) / len(self.results)
+    def review_load(self) -> float | None:
+        return _ratio(len(self.review_queue), len(self.results))
 
     def summary(self) -> dict:
+        def rnd(x: float | None) -> float | None:
+            return None if x is None else round(x, 3)
+
         return {
             "claims_total": len(self.results),
             "claims_checkable": len(self.checkable),
-            "citation_recall": round(self.citation_recall, 3),
-            "citation_precision": round(self.citation_precision, 3),
-            "unsupported_rate": round(self.unsupported_rate, 3),
-            "partial_rate": round(self.partial_rate, 3),
-            "review_load": round(self.review_load, 3),
+            "abstained": self.abstained,
+            "citation_recall": rnd(self.citation_recall),
+            "citation_precision": rnd(self.citation_precision),
+            "per_citation_precision": rnd(self.per_citation_precision),
+            "partial_rate": rnd(self.partial_rate),
+            "contradicted_rate": rnd(self.contradicted_rate),
+            "unsupported_rate": rnd(self.unsupported_rate),
+            "ungrounded_rate": rnd(self.ungrounded_rate),
+            "review_load": rnd(self.review_load),
         }
-

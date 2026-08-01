@@ -1,9 +1,12 @@
 """Run the full pipeline on a bundled corpus with the mock judge (no keys),
 or the LLM judge when GROUNDED_EVALS_JUDGE=llm is set.
 
-The example answer contains, on purpose: a supported claim, a partially
-supported claim (right fact, wrong number), an unsupported cited claim, an
-uncited claim, and an opinion — one of each failure mode the metrics separate.
+The example answer contains, on purpose: a supported claim, a contradicted
+claim (right fact, wrong number — the sneakiest failure), an unsupported
+cited claim, an uncited claim, and an opinion — one of each failure mode the
+metrics separate. Citations use numbered markers ("[1]", "[2]") the way real
+grounded generators emit them; the pipeline resolves them against the source
+list.
 """
 import json
 import os
@@ -37,20 +40,21 @@ QUESTION = "Compare Wembley Stadium and the Etihad Stadium."
 
 ANSWER = (
     "Wembley Stadium has a seating capacity of 90,000 and is the largest "
-    "stadium in the United Kingdom. [wembley] "
-    "The stadium reopened in 2010 after a complete rebuild. [wembley] "
-    "The Etihad Stadium hosts around 80,000 fans for football matches. [etihad] "
+    "stadium in the United Kingdom. [1] "
+    "The stadium reopened in 2010 after a complete rebuild. [1] "
+    "The Etihad Stadium hosts around 80,000 fans for football matches. [2] "
     "The Etihad's naming rights are the most valuable in the Premier League. "
     "I think Wembley is the more iconic venue of the two."
 )
 
 
 def main() -> None:
-    judge = MockJudge()
     if os.environ.get("GROUNDED_EVALS_JUDGE") == "llm":
         from grounded_evals.judge import LLMJudge
 
-        judge = LLMJudge()
+        judge = LLMJudge.from_env()
+    else:
+        judge = MockJudge()
 
     report = evaluate(QUESTION, ANSWER, CORPUS, judge)
 
@@ -65,4 +69,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
