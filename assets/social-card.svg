@@ -1,0 +1,101 @@
+<svg width="1280" height="640" viewBox="0 0 1280 640" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0c1122"/>
+      <stop offset="1" stop-color="#131a30"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.78" cy="0.35" r="0.8">
+      <stop offset="0" stop-color="#1c2a4d" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#0c1122" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- background -->
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <rect width="1280" height="640" fill="url(#glow)"/>
+
+  <!-- ===================== left: message ===================== -->
+  <g font-family="Menlo, SF Mono, Consolas, monospace">
+    <text x="84" y="120" font-size="24" fill="#34d399">[ grounded-evals ]</text>
+  </g>
+  <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+    <text x="84" y="205" font-size="60" font-weight="700" fill="#eef1f8">A citation is</text>
+    <text x="84" y="275" font-size="60" font-weight="700" fill="#eef1f8">a promise.</text>
+    <text x="84" y="340" font-size="30" fill="#9aa3b8">Most AI products never check it.</text>
+    <text x="84" y="382" font-size="30" fill="#9aa3b8">This harness does — claim by claim.</text>
+  </g>
+
+  <!-- verdict chips (icons drawn as paths: text glyphs vary across rasterizers) -->
+  <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="21" font-weight="600">
+    <rect x="84" y="428" rx="17" width="160" height="38" fill="#12291f" stroke="#2c5c45"/>
+    <path d="M 104 447 l 7 7 l 13 -13" stroke="#34d399" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="134" y="454" fill="#34d399">supported</text>
+    <rect x="256" y="428" rx="17" width="126" height="38" fill="#2b2412" stroke="#5c4f24"/>
+    <circle cx="284" cy="447" r="8" stroke="#fbbf24" stroke-width="2.5" fill="none"/>
+    <path d="M 284 439 a 8 8 0 0 0 0 16 z" fill="#fbbf24"/>
+    <text x="302" y="454" fill="#fbbf24">partial</text>
+    <rect x="394" y="428" rx="17" width="184" height="38" fill="#2b1519" stroke="#5c2c33"/>
+    <path d="M 414 441 l 12 12 M 426 441 l -12 12" stroke="#f87171" stroke-width="3" stroke-linecap="round"/>
+    <text x="438" y="454" fill="#f87171">contradicted</text>
+    <rect x="84" y="478" rx="17" width="196" height="38" fill="#13203a" stroke="#2b436e"/>
+    <path d="M 104 497 h 20 M 116 490 l 8 7 l -8 7" stroke="#60a5fa" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="136" y="504" fill="#60a5fa">human review</text>
+  </g>
+
+  <g font-family="Menlo, SF Mono, Consolas, monospace">
+    <text x="84" y="576" font-size="17" fill="#5d667c">claims &#8594; citation alignment &#8594; verdicts &#8594; review routing</text>
+  </g>
+
+  <!-- ===================== right: the failure it catches ===================== -->
+  <!-- answer card -->
+  <g>
+    <rect x="672" y="86" rx="14" width="528" height="122" fill="#161e36" stroke="#28324f"/>
+    <g font-family="Menlo, SF Mono, Consolas, monospace">
+      <text x="700" y="122" font-size="15" letter-spacing="2" fill="#7d87a0">AI ANSWER</text>
+    </g>
+    <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="26">
+      <text x="700" y="166" fill="#dfe4f0">&#8220;The stadium reopened</text>
+      <text x="700" y="196" fill="#dfe4f0">in <tspan fill="#f87171" font-weight="700">2010</tspan>.&#8221; <tspan fill="#60a5fa" font-weight="600">[1]</tspan></text>
+    </g>
+  </g>
+
+  <!-- connector -->
+  <g stroke="#3d4a6e" stroke-width="2.5" fill="none">
+    <path d="M 936 208 L 936 252"/>
+    <path d="M 927 243 L 936 252 L 945 243"/>
+  </g>
+  <g font-family="Menlo, SF Mono, Consolas, monospace">
+    <text x="956" y="238" font-size="15" fill="#7d87a0">checked against</text>
+  </g>
+
+  <!-- source card -->
+  <g>
+    <rect x="672" y="252" rx="14" width="528" height="122" fill="#161e36" stroke="#28324f"/>
+    <g font-family="Menlo, SF Mono, Consolas, monospace">
+      <text x="700" y="288" font-size="15" letter-spacing="2" fill="#7d87a0">CITED SOURCE [1]</text>
+    </g>
+    <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="26">
+      <text x="700" y="332" fill="#dfe4f0">&#8220;&#8230;rebuilt and reopened</text>
+      <text x="700" y="362" fill="#dfe4f0">in <tspan fill="#34d399" font-weight="700">2007</tspan>&#8230;&#8221;</text>
+    </g>
+  </g>
+
+  <!-- verdict card -->
+  <g>
+    <rect x="672" y="418" rx="14" width="528" height="136" fill="#1d1420" stroke="#5c2c33"/>
+    <rect x="700" y="446" rx="15" width="200" height="34" fill="#2b1519" stroke="#5c2c33"/>
+    <path d="M 720 456 l 11 11 M 731 456 l -11 11" stroke="#f87171" stroke-width="3" stroke-linecap="round"/>
+    <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+      <text x="744" y="470" font-size="20" font-weight="700" fill="#f87171">CONTRADICTED</text>
+      <text x="700" y="516" font-size="23" fill="#c9cfdd">claim says 2010 &#8212; the source says 2007</text>
+    </g>
+    <g font-family="Menlo, SF Mono, Consolas, monospace">
+      <text x="700" y="543" font-size="16" fill="#60a5fa">confidence 0.55 &#8594; routed to human review</text>
+    </g>
+  </g>
+
+  <!-- footer -->
+  <g font-family="Menlo, SF Mono, Consolas, monospace">
+    <text x="1200" y="600" font-size="16" fill="#5d667c" text-anchor="end">still looks cited. still wrong. now caught.</text>
+  </g>
+</svg>

@@ -1,5 +1,9 @@
 # grounded-evals
 
+<p align="center">
+  <img src="assets/social-card.png" alt="A citation is a promise — most AI products never check it; this harness does, claim by claim. An AI answer says the stadium reopened in 2010, citing a source that says 2007: verdict CONTRADICTED, confidence 0.55, routed to human review. Verdicts: supported, partial, contradicted, human review." width="100%">
+</p>
+
 **An evaluation harness for retrieval-grounded generation. A citation is treated as a machine-checkable contract between an answer and its sources — this repo checks the contract.**
 
 Generative systems earn trust when their output is accountable to something real. For a text-to-3D system that means physics and navigability; for a retrieval-grounded answer it means *citations that actually support the claims they are attached to*. Most RAG pipelines measure retrieval quality and answer quality separately, and never verify the link between them. That link is where grounded systems quietly fail: the answer is fluent, the sources are relevant, and the specific sentence a user relies on is supported by none of them.
