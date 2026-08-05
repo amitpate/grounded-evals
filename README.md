@@ -1,8 +1,10 @@
 # grounded-evals
 
 <p align="center">
-  <img src="assets/social-card.png" alt="A citation is a promise — most AI products never check it; this harness does, claim by claim. An AI answer says the stadium reopened in 2010, citing a source that says 2007: verdict CONTRADICTED, confidence 0.55, routed to human review. Verdicts: supported, partial, contradicted, human review." width="100%">
+  <img src="assets/social-card.png" alt="A citation is a promise — most AI products never check it; this harness does, claim by claim. An AI answer says the stadium reopened in 2010, citing a source that says 2007: verdict CONTRADICTED, confidence 0.55, routed to human review. Verdicts: supported, partial, contradicted, human review. Tagged work in progress." width="100%">
 </p>
+
+> **Status: work in progress.** This is a first draft under active development — interfaces, metrics and fixtures are still moving. Expect breaking changes between commits.
 
 **An evaluation harness for retrieval-grounded generation. A citation is treated as a machine-checkable contract between an answer and its sources — this repo checks the contract.**
 

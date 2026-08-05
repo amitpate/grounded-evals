@@ -17,6 +17,8 @@
   <!-- ===================== left: message ===================== -->
   <g font-family="Menlo, SF Mono, Consolas, monospace">
     <text x="84" y="120" font-size="24" fill="#34d399">[ grounded-evals ]</text>
+    <rect x="386" y="94" rx="17" width="234" height="34" fill="#2b2412" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="6 5"/>
+    <text x="410" y="117" font-size="15" letter-spacing="2" fill="#fbbf24">WORK IN PROGRESS</text>
   </g>
   <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
     <text x="84" y="205" font-size="60" font-weight="700" fill="#eef1f8">A citation is</text>
